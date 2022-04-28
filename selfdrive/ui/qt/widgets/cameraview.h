@@ -23,7 +23,7 @@ public:
 signals:
   void clicked();
   void vipcThreadConnected(VisionIpcClient *);
-  void vipcThreadFrameReceived(VisionBuf *);
+  void vipcThreadFrameReceived(VisionBuf *, quint64);
 
 protected:
   void paintGL() override;
@@ -45,6 +45,7 @@ protected:
   bool zoomed_view;
   std::mutex lock;
   VisionBuf *latest_frame = nullptr;
+  quint64 cam_frame_id;
   GLuint frame_vao, frame_vbo, frame_ibo;
   mat4 frame_mat;
   std::unique_ptr<WaitFence> wait_fence;
@@ -61,5 +62,5 @@ protected:
 
 protected slots:
   void vipcConnected(VisionIpcClient *vipc_client);
-  void vipcFrameReceived(VisionBuf *vipc_client);
+  void vipcFrameReceived(VisionBuf *vipc_client, quint64 frame_id);
 };

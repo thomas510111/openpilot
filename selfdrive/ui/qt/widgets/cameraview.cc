@@ -211,6 +211,8 @@ void CameraViewWidget::updateFrameMat(int w, int h) {
 }
 
 void CameraViewWidget::paintGL() {
+  qDebug() << "painting frame id:" << cam_frame_id;
+
   glClearColor(bg.redF(), bg.greenF(), bg.blueF(), bg.alphaF());
   glClear(GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
@@ -269,7 +271,9 @@ void CameraViewWidget::vipcConnected(VisionIpcClient *vipc_client) {
   updateFrameMat(width(), height());
 }
 
-void CameraViewWidget::vipcFrameReceived(VisionBuf *buf) {
+void CameraViewWidget::vipcFrameReceived(VisionBuf *buf, quint64 frame_id) {
+  cam_frame_id = frame_id;
+  qDebug() << "vipcFrameReceived()";
   latest_frame = buf;
   update();
 }
@@ -277,6 +281,7 @@ void CameraViewWidget::vipcFrameReceived(VisionBuf *buf) {
 void CameraViewWidget::vipcThread() {
   VisionStreamType cur_stream_type = stream_type;
   std::unique_ptr<VisionIpcClient> vipc_client;
+  VisionIpcBufExtra meta_main = {0};
 
   while (!QThread::currentThread()->isInterruptionRequested()) {
     if (!vipc_client || cur_stream_type != stream_type) {
@@ -292,8 +297,8 @@ void CameraViewWidget::vipcThread() {
       emit vipcThreadConnected(vipc_client.get());
     }
 
-    if (VisionBuf *buf = vipc_client->recv(nullptr, 1000)) {
-      emit vipcThreadFrameReceived(buf);
+    if (VisionBuf *buf = vipc_client->recv(&meta_main, 1000)) {
+      emit vipcThreadFrameReceived(buf, meta_main.frame_id);
     }
   }
 }

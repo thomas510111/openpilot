@@ -402,6 +402,7 @@ void NvgWindow::paintGL() {
   if (fps < 15) {
     LOGW("slow frame rate: %.2f fps", fps);
   }
+  qDebug("frame rate: %.2f fps", 1. / dt * 1000);
   prev_draw_t = cur_draw_t;
 }
 
