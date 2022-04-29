@@ -1214,7 +1214,7 @@ void process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
   if (env_send_driver) {
     framed.setImage(get_frame_image(&c->buf));
   }
-  process_registers(s, c, cnt);
+  process_registers(s, c, framed);
   s->pm->send("driverCameraState", msg);
 }
 
@@ -1233,7 +1233,7 @@ void process_road_camera(MultiCameraState *s, CameraState *c, int cnt) {
     framed.setTransform(b->yuv_transform.v);
     LOGT(c->buf.cur_frame_data.frame_id, "%s: Transformed", "RoadCamera");
   }
-  process_registers(s, c, cnt);
+  process_registers(s, c, framed);
   s->pm->send(c == &s->road_cam ? "roadCameraState" : "wideRoadCameraState", msg);
 
   const auto [x, y, w, h] = (c == &s->wide_road_cam) ? std::tuple(96, 250, 1734, 524) : std::tuple(96, 160, 1734, 986);
