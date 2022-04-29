@@ -1203,11 +1203,9 @@ void process_registers(MultiCameraState *s, CameraState *c, int cnt){
 }
 
 void process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
-  int j = Hardware::TICI() ? 1 : 3;
-  if (cnt % j == 0) {
-    s->sm->update(0);
-    driver_cam_auto_exposure(c, *(s->sm));
-  }
+  s->sm->update(0);
+  driver_cam_auto_exposure(c, *(s->sm));
+
   MessageBuilder msg;
   auto framed = msg.initEvent().initDriverCameraState();
   framed.setFrameType(cereal::FrameData::FrameType::FRONT);
