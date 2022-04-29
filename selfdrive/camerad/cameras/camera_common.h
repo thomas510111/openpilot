@@ -115,6 +115,7 @@ public:
   FrameMetadata cur_frame_data;
   VisionBuf *cur_rgb_buf;
   VisionBuf *cur_yuv_buf;
+  VisionBuf *cur_camera_buf;
   std::unique_ptr<VisionBuf[]> camera_bufs;
   std::unique_ptr<FrameMetadata[]> camera_bufs_metadata;
   int rgb_width, rgb_height, rgb_stride;
@@ -142,6 +143,7 @@ void cameras_open(MultiCameraState *s);
 void cameras_run(MultiCameraState *s);
 void cameras_close(MultiCameraState *s);
 void camera_autoexposure(CameraState *s, float grey_frac);
+void driver_cam_auto_exposure(CameraState *c, SubMaster &sm);
 void camerad_thread();
 
 int open_v4l_by_name_and_index(const char name[], int index = 0, int flags = O_RDWR | O_NONBLOCK);

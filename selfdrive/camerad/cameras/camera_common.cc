@@ -147,22 +147,7 @@ bool CameraBuf::acquire() {
 
   double start_time = millis_since_boot();
 
-  if (camera_state->ci.registers_offset >= 0) {
-    uint8_t *data = (uint8_t*)camera_bufs[cur_buf_idx].addr + camera_state->ci.registers_offset;
-    auto registers = camera_state->parse_registers(data, {0x2000, 0x2002, 0x20b0, 0x20b2, 0x30c6, 0x30c8, 0x30ca, 0x30cc});
-    uint32_t frame_id = ((uint32_t)registers[0x2000] << 16) | registers[0x2002];
-    printf("%d - frame id: %d\n", camera_state->camera_num, frame_id);
-
-    double slope_0 = (125.0 - 55.0) / ((double)registers[0x30c6] - (double)registers[0x30c8]);
-    double t0_0 = 55.0 - slope_0 * (double)registers[0x30c8];
-    double temp_0 = t0_0 + slope_0 * registers[0x20b0];
-    printf("%d - temp 0 (top): %.2f\n", camera_state->camera_num, temp_0);
-
-    double slope_1 = (125.0 - 55.0) / ((double)registers[0x30ca] - (double)registers[0x30cc]);
-    double t0_1 = 55.0 - slope_1 * (double)registers[0x30cc];
-    double temp_1 = t0_1 + slope_1 * registers[0x20b2];
-    printf("%d - temp 1 (bottom): %.2f\n", camera_state->camera_num, temp_1);
-  }
+  cur_camera_buf = &camera_bufs[cur_buf_idx];
 
   if (debayer) {
     float gain = 0.0;
@@ -394,7 +379,7 @@ std::thread start_process_thread(MultiCameraState *cameras, CameraState *cs, pro
   return std::thread(processing_thread, cameras, cs, callback);
 }
 
-static void driver_cam_auto_exposure(CameraState *c, SubMaster &sm) {
+void driver_cam_auto_exposure(CameraState *c, SubMaster &sm) {
   static const bool is_rhd = Params().getBool("IsRHD");
   struct ExpRect {int x1, x2, x_skip, y1, y2, y_skip;};
   const CameraBuf *b = &c->buf;
@@ -419,11 +404,6 @@ static void driver_cam_auto_exposure(CameraState *c, SubMaster &sm) {
 }
 
 void common_process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
-  int j = Hardware::TICI() ? 1 : 3;
-  if (cnt % j == 0) {
-    s->sm->update(0);
-    driver_cam_auto_exposure(c, *(s->sm));
-  }
   MessageBuilder msg;
   auto framed = msg.initEvent().initDriverCameraState();
   framed.setFrameType(cereal::FrameData::FrameType::FRONT);

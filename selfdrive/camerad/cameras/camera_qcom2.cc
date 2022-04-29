@@ -1182,6 +1182,43 @@ void camera_autoexposure(CameraState *s, float grey_frac) {
   s->set_camera_exposure(grey_frac);
 }
 
+void process_registers(MultiCameraState *s, CameraState *c, int cnt){
+  if (c->ci.registers_offset >= 0) {
+    uint8_t *data = (uint8_t*)c->buf.cur_camera_buf->addr + c->ci.registers_offset;
+
+    auto registers = c->parse_registers(data, {0x2000, 0x2002, 0x20b0, 0x20b2, 0x30c6, 0x30c8, 0x30ca, 0x30cc});
+    uint32_t frame_id = ((uint32_t)registers[0x2000] << 16) | registers[0x2002];
+    printf("%d - frame id: %d\n", c->camera_num, frame_id);
+
+    double slope_0 = (125.0 - 55.0) / ((double)registers[0x30c6] - (double)registers[0x30c8]);
+    double t0_0 = 55.0 - slope_0 * (double)registers[0x30c8];
+    double temp_0 = t0_0 + slope_0 * registers[0x20b0];
+    printf("%d - temp 0 (top): %.2f\n", c->camera_num, temp_0);
+
+    double slope_1 = (125.0 - 55.0) / ((double)registers[0x30ca] - (double)registers[0x30cc]);
+    double t0_1 = 55.0 - slope_1 * (double)registers[0x30cc];
+    double temp_1 = t0_1 + slope_1 * registers[0x20b2];
+    printf("%d - temp 1 (bottom): %.2f\n", c->camera_num, temp_1);
+  }
+}
+
+void process_driver_camera(MultiCameraState *s, CameraState *c, int cnt) {
+  int j = Hardware::TICI() ? 1 : 3;
+  if (cnt % j == 0) {
+    s->sm->update(0);
+    driver_cam_auto_exposure(c, *(s->sm));
+  }
+  MessageBuilder msg;
+  auto framed = msg.initEvent().initDriverCameraState();
+  framed.setFrameType(cereal::FrameData::FrameType::FRONT);
+  fill_frame_data(framed, c->buf.cur_frame_data);
+  if (env_send_driver) {
+    framed.setImage(get_frame_image(&c->buf));
+  }
+  process_registers(s, c, cnt);
+  s->pm->send("driverCameraState", msg);
+}
+
 // called by processing_thread
 void process_road_camera(MultiCameraState *s, CameraState *c, int cnt) {
   const CameraBuf *b = &c->buf;
@@ -1197,6 +1234,7 @@ void process_road_camera(MultiCameraState *s, CameraState *c, int cnt) {
     framed.setTransform(b->yuv_transform.v);
     LOGT(c->buf.cur_frame_data.frame_id, "%s: Transformed", "RoadCamera");
   }
+  process_registers(s, c, cnt);
   s->pm->send(c == &s->road_cam ? "roadCameraState" : "wideRoadCameraState", msg);
 
   const auto [x, y, w, h] = (c == &s->wide_road_cam) ? std::tuple(96, 250, 1734, 524) : std::tuple(96, 160, 1734, 986);
@@ -1207,7 +1245,7 @@ void process_road_camera(MultiCameraState *s, CameraState *c, int cnt) {
 void cameras_run(MultiCameraState *s) {
   LOG("-- Starting threads");
   std::vector<std::thread> threads;
-  if (s->driver_cam.enabled) threads.push_back(start_process_thread(s, &s->driver_cam, common_process_driver_camera));
+  if (s->driver_cam.enabled) threads.push_back(start_process_thread(s, &s->driver_cam, process_driver_camera));
   if (s->road_cam.enabled) threads.push_back(start_process_thread(s, &s->road_cam, process_road_camera));
   if (s->wide_road_cam.enabled) threads.push_back(start_process_thread(s, &s->wide_road_cam, process_road_camera));
 
