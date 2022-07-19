@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+export SKIP_FW_QUERY=1
+export FINGERPRINT="suzuki"
+
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1

@@ -1,0 +1,2 @@
+class CAR:
+  SUZUKI = 'suzuki'
