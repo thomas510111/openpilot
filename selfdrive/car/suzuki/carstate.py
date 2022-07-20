@@ -3,7 +3,7 @@ from cereal import car
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
 #from opendbc.can.can_define import CANDefine
-from selfdrive.car.faw.values import DBC_FILES, CANBUS, GearShifter, CarControllerParams
+from selfdrive.car.suzuki.values import DBC_FILES, CANBUS, GearShifter, CarControllerParams
 
 class CarState(CarStateBase):
   # def __init__(self, CP):
