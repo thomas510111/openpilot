@@ -7,36 +7,22 @@ import cereal.messaging as messaging
 from selfdrive.car import gen_empty_fingerprint, get_safety_config
 from selfdrive.car.interfaces import CarInterfaceBase
 
-# mocked car interface to work with chffrplus
-TS = 0.01  # 100Hz
-YAW_FR = 0.2  # ~0.8s time constant on yaw rate filter
-# low pass gain
-LPG = 2 * math.pi * YAW_FR * TS / (1 + 2 * math.pi * YAW_FR * TS)
 
 
 class CarInterface(CarInterfaceBase):
-  def __init__(self, CP, CarController, CarState):
-    super().__init__(CP, CarController, CarState)
+  #def __init__(self, CP, CarController, CarState):
+  #  super().__init__(CP, CarController, CarState)
 
-    cloudlog.debug("Using suzuki Car Interface")
-
-    self.sensor = messaging.sub_sock('sensorEvents')
-    self.gps = messaging.sub_sock('gpsLocationExternal')
-    self.CC = True # temp need that to be able to set safetyMode, due to how controlsd works.
-    self.speed = 0.
-    self.prev_speed = 0.
-    self.yaw_rate = 0.
-    self.yaw_rate_meas = 0.
-
-  @staticmethod
-  def compute_gb(accel, speed):
-    return accel
+  #@staticmethod
+  #def compute_gb(accel, speed):
+  #  return accel
 
   @staticmethod
   def get_params(candidate, fingerprint=gen_empty_fingerprint(), car_fw=None):
     ret = CarInterfaceBase.get_std_params(candidate, fingerprint)
     ret.carName = "suzuki"
     ret.safetyConfigs = [get_safety_config(car.CarParams.SafetyModel.allOutput, 1)]
+    
     ret.mass = 1700.
     ret.rotationalInertia = 2500.
     ret.wheelbase = 2.70
@@ -49,43 +35,29 @@ class CarInterface(CarInterfaceBase):
 
   # returns a car.CarState
   def update(self, c, can_strings):
-    # get basic data from phone and gps since CAN isn't connected
-    sensors = messaging.recv_sock(self.sensor)
-    if sensors is not None:
-      for sensor in sensors.sensorEvents:
-        if sensor.type == 4:  # gyro
-          self.yaw_rate_meas = -sensor.gyro.v[0]
+    
+    # Process the most recent CAN message traffic, and check for validity
+    # The camera CAN has no signals we use at this time, but we process it
+    # anyway so we can test connectivity with can_valid
+    self.cp.update_strings(can_strings)
+    self.cp_cam.update_strings(can_strings)
 
-    gps = messaging.recv_sock(self.gps)
-    if gps is not None:
-      self.prev_speed = self.speed
-      self.speed = gps.gpsLocationExternal.speed
+    ret = self.CS.update(self.cp, self.cp_cam)
+    ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
+    ret.steeringRateLimited = self.CC.steer_rate_limited if self.CC is not None else False
+    
+    
+    events = self.create_common_events(ret)
+    
+    
+    ret.events = events.to_msg()
+    
 
-    # create message
-    ret = car.CarState.new_message()
-    ret.canValid = True
 
-    # speeds
-    ret.vEgo = self.speed
-    ret.vEgoRaw = self.speed
-    a = self.speed - self.prev_speed
-
-    ret.aEgo = a
-    ret.brakePressed = a < -0.5
-
-    ret.standstill = self.speed < 0.01
-    ret.wheelSpeeds.fl = self.speed
-    ret.wheelSpeeds.fr = self.speed
-    ret.wheelSpeeds.rl = self.speed
-    ret.wheelSpeeds.rr = self.speed
-
-    self.yawRate = LPG * self.yaw_rate_meas + (1. - LPG) * self.yaw_rate
-    curvature = self.yaw_rate / max(self.speed, 1.)
-    ret.steeringAngleDeg = curvature * self.CP.steerRatio * self.CP.wheelbase * CV.RAD_TO_DEG
-
-    return ret.as_reader()
-
+    self.CS.out = ret.as_reader()
+    return self.CS.out 
+    
   def apply(self, c):
-    # in mock no carcontrols
-    actuators = car.CarControl.Actuators.new_message()
-    return actuators, []
+    ret = self.CC.update(c, self.CS, self.frame, c.actuators)
+    self.frame += 1
+    return ret
