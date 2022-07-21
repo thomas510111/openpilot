@@ -7,7 +7,7 @@ class CarController():
     self.apply_steer_last = 0
     self.CP = CP
 
-    self.packer_pt = CANPacker(DBC_FILES.suzuki_vitara)
+    self.packer_pt = CANPacker(DBC_FILES.suzuki)
 
     self.steer_rate_limited = False
 
@@ -15,7 +15,7 @@ class CarController():
     """ Controls thread """
 
     can_sends = []
-      
+
     new_actuators = actuators.copy()
 
 

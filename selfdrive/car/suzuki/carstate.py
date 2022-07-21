@@ -31,17 +31,17 @@ class CarState(CarStateBase):
 
     # Update steering angle, rate, yaw rate, and driver input torque. FAW send
     # the sign/direction in a separate signal so they must be recombined.
-    
+
     #ret.steeringAngleDeg = pt_cp.vl["EPS_1"]["STEER_ANGLE"] * (1, -1)[int(pt_cp.vl["EPS_1"]["STEER_ANGLE_DIRECTION"])]
     #ret.steeringRateDeg = pt_cp.vl["EPS_1"]["STEER_RATE"] * (1, -1)[int(pt_cp.vl["EPS_1"]["STEER_RATE_DIRECTION"])]
-    
-    
+
+
     # FIXME: don't have a solid direction bit for this yet, borrow from overall EPS output
-    
+
     #ret.steeringTorque = pt_cp.vl["EPS_2"]["DRIVER_INPUT_TORQUE"] * (1, -1)[int(pt_cp.vl["EPS_2"]["EPS_TORQUE_DIRECTION"])]
     #ret.steeringPressed = abs(ret.steeringTorque) > CarControllerParams.STEER_DRIVER_ALLOWANCE
-    
-    
+
+
     # TODO: populate this
     # ret.yawRate = pt_cp.vl["ESP_02"]["ESP_Gierrate"] * (1, -1)[int(pt_cp.vl["ESP_02"]["ESP_VZ_Gierrate"])] * CV.DEG_TO_RAD
 
@@ -52,19 +52,19 @@ class CarState(CarStateBase):
     # ret.steerFaultTemporary = hca_status in ("INITIALIZING", "REJECTED")
 
     # Update gas, brakes, and gearshift.
-    
+
     #ret.gas = pt_cp.vl["ECM_1"]["DRIVER_THROTTLE"]
     #ret.gasPressed = ret.gas > 0
     #ret.brake = pt_cp.vl["ABS_2"]["BRAKE_PRESSURE"]
     #ret.brakePressed = ret.brake > 0  # TODO: should be fine, but check for a nice boolean anyway
-    
+
     # TODO: populate this
     # ret.parkingBrake = bool(pt_cp.vl["Kombi_01"]["KBI_Handbremse"])  # FIXME: need to include an EPB check as well
 
     # Update gear and/or clutch position data.
     # TODO: populate this
     # ret.gearShifter = self.parse_gear_shifter(self.shifter_values.get(pt_cp.vl["Getriebe_11"]["GE_Fahrstufe"], None))
-    
+
     #ret.gearShifter = GearShifter.drive
 
     # Update door and trunk/hatch lid open status.
@@ -92,8 +92,8 @@ class CarState(CarStateBase):
 
     # Update ACC radar status.
     # TODO: populate this properly, need an available signal and overrides (11 avail?, 27 gas override?, 19 coastdown?)
-    
-    
+
+
     #ret.cruiseState.available = True
     #ret.cruiseState.enabled = pt_cp.vl["ACC"]["STATUS"] == 20
 
@@ -141,7 +141,7 @@ class CarState(CarStateBase):
       #("ACC", 50),
     ]
 
-    return CANParser(DBC_FILES.faw, signals, checks, CANBUS.pt)
+    return CANParser(DBC_FILES.suzuki, signals, checks, CANBUS.pt)
 
   @staticmethod
   def get_cam_can_parser(CP):
@@ -152,4 +152,4 @@ class CarState(CarStateBase):
       # sig_address, frequency
     ]
 
-    return CANParser(DBC_FILES.faw, signals, checks, CANBUS.cam)
+    return CANParser(DBC_FILES.suzuki, signals, checks, CANBUS.cam)
